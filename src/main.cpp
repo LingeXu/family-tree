@@ -43,14 +43,14 @@ int main() {
                 break;
 
             case 2:
-                //tree.DisplayTree();
+                tree.DisplayTree();
                 break;
 
             case 3:
                 cout << "请输入代数: ";
                 cin >> gen;
                 cin.ignore();
-                //tree.ShowGeneration(gen);
+                tree.ShowGeneration(gen);
                 break;
 
             case 4:

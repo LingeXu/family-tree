@@ -318,3 +318,70 @@ void FamilyTree::BuildFromFile(const char* FileName) {
         cout << "未找到根节点!" << endl;
     }
 }
+
+// (2) 显示家谱树 
+void FamilyTree::DisplayTree() const {
+    if (root == nullptr) {
+        cout << "家谱为空" << endl;
+        return;
+    }
+    DisplayTreeHelper(root, 0);
+}
+
+void FamilyTree::DisplayTreeHelper(Person* node, int depth) const {
+    if (node == nullptr) return;
+
+    for (int i = 0; i < depth; i++) cout << "    ";
+    cout << "第" << node->GetGeneration() << "代: " << node->name
+         << "(" << node->BirthDate << ", " << node->status << ")" << endl;
+
+    ChildNode* cur = node->ChildHead->next;
+    while (cur != nullptr) {
+        DisplayTreeHelper(cur->child, depth + 1);
+        cur = cur->next;
+    }
+}
+
+// (3) 显示第n代的人数和姓名
+void FamilyTree::ShowGeneration(int n) const {
+    if (n < 1 || root == nullptr) {
+        cout << "无效代数或家谱为空" << endl;
+        return;
+    }
+
+    // 层序遍历 (用数组模拟队列)
+    const int MAX_QUEUE = 1000;
+    Person* Queue[MAX_QUEUE];
+    int GenQueue[MAX_QUEUE]; 
+    int front = 0, rear = 0;
+
+    Queue[rear] = root;
+    GenQueue[rear] = 1;
+    rear++;
+
+    Person* Result[100];
+    int count = 0;
+
+    while (front < rear && count < 100) {
+        Person* p = Queue[front];
+        int g = GenQueue[front];
+        front++;
+
+        if (g == n) Result[count++] = p;
+
+        if (g < n) {
+            ChildNode* cur = p->ChildHead->next;
+            while (cur != nullptr && rear < MAX_QUEUE) {
+                Queue[rear] = cur->child;
+                GenQueue[rear] = g + 1;
+                rear++;
+                cur = cur->next;
+            }
+        }
+    }
+
+    cout << "第" << n << "代共有" << count << "人:" << endl;
+    for (int i = 0; i < count; i++) {
+        cout << "   " << Result[i]->name << "(" << Result[i]->BirthDate << ")" << endl;
+    }
+}
