@@ -56,7 +56,7 @@ int main() {
             case 4:
                 cout << "请输入姓名: ";
                 cin.getline(name, 50);
-                //tree.QueryByName(name);
+                tree.QueryByName(name);
                 break;
 
             case 5:
@@ -64,7 +64,7 @@ int main() {
                 cin.getline(name, 50);
                 cout << "请输入孩子姓名: ";
                 cin.getline(name2, 50);
-                cout << "请输入出生日期: ";
+                cout << "请输入出生时间: ";
                 cin.getline(birth, 20);
                 cout << "请输入婚姻状况(未婚/已婚): ";
                 cin.getline(marriage, 20);
@@ -73,12 +73,12 @@ int main() {
                 cout << "请输入状况(在世/已故): ";
                 cin.getline(status, 20);
                 if (strcmp(status, "已故") == 0) {
-                    cout << "请输入死亡日期: ";
+                    cout << "请输入死亡时间: ";
                     cin.getline(death, 20);
                 } else {
                     death[0] = '\0';
                 }
-                //tree.AddChild(name, name2, birth, marriage, address, status, death);
+                tree.AddChild(name, name2, birth, marriage, address, status, death);
                 break;
 
             case 6:
@@ -90,7 +90,7 @@ int main() {
             case 7:
                 cout << "请输入要修改的姓名: ";
                 cin.getline(name, 50);
-                cout << "请输入新的出生日期(留空则不修改): ";
+                cout << "请输入新的出生时间(留空则不修改): ";
                 cin.getline(birth, 20);
                 cout << "请输入新的婚姻状况(留空则不修改): ";
                 cin.getline(marriage, 20);
@@ -98,7 +98,7 @@ int main() {
                 cin.getline(address, 50);
                 cout << "请输入新的状况(留空则不修改): ";
                 cin.getline(status, 20);
-                cout << "请输入新的死亡日期(留空则不修改): ";
+                cout << "请输入新的死亡时间(留空则不修改): ";
                 cin.getline(death, 20);
                 //tree.ModifyPerson(name, birth, marriage, address, status, death);
                 break;

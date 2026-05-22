@@ -385,3 +385,62 @@ void FamilyTree::ShowGeneration(int n) const {
         cout << "   " << Result[i]->name << "(" << Result[i]->BirthDate << ")" << endl;
     }
 }
+
+// (4) 按姓名查询
+void FamilyTree::QueryByName(const char* name) const {
+    Person* p = SelectPersonByName(name);
+    if (!p) return;
+
+    cout << "个人信息: " << endl;
+    cout << "id: " << p->id << endl;
+    cout << "姓名: " << p->name << endl;
+    cout << "出生年月: " << p->BirthDate << endl;
+    cout << "婚姻状况: " << p->marriage << endl;
+    cout << "地址: " << p->address << endl;
+    cout << "目前状况: " << p->status << endl;
+    if (StrEqual(p->status, "已故")) cout << "死亡年月: " << p->DeathDate << endl;
+    cout << "代数: 第" << p->GetGeneration() << "代" << endl;
+
+    if (p->father) {
+        cout << "父亲: " << p->father->name << "(" << p->father->BirthDate << ")" << endl;
+    } else {
+        cout << "父亲: 无" << endl;
+    }
+
+    cout << "孩子: ";
+    if (!p->HasDescendants()) {
+        cout << "无" << endl;
+    } else {
+        ChildNode* cur = p->ChildHead->next;
+        while (cur != nullptr) {
+            cout << cur->child->name << "(" << cur->child->BirthDate
+                 << ", " << cur->child->status << ")" << endl;
+            if(cur->next != nullptr)
+                cout << "     ";
+            cur = cur->next;
+        }
+    }
+}
+
+// (5) 给某人添加孩子
+void FamilyTree::AddChild(const char* FatherName, const char* name,
+                          const char* birth, const char* marriage,
+                          const char* address, const char* status,
+                          const char* DeathDate) {
+    Person* father = SelectPersonByName(FatherName);
+    if (!father) return;
+
+    if (PersonCount >= 999) {
+        cout << "人数超出上限" << endl;
+        return;
+    }
+
+    Person* child = new Person(name, birth, marriage, address, status, DeathDate);
+    child->id = ++PersonCount;
+    people[child->id] = child;
+
+    father->InsertChildSorted(child);
+
+    cout << "成功添加: " << name << "(id=" << child->id << ")作为" 
+         << FatherName << "的孩子" << endl;
+}
