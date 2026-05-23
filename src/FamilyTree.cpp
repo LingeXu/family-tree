@@ -186,7 +186,7 @@ void FamilyTree::BuildFromFile(const char* FileName) {
 
     cout << "正在加载文件: " << FileName << endl;
     
-    char line[1024];            // 增大缓冲区
+    char line[1024];                 // 增大缓冲区
     in_file.getline(line, 1024);     // 跳过表头
     
     // 临时存储所有人员信息
@@ -251,7 +251,7 @@ void FamilyTree::BuildFromFile(const char* FileName) {
     
     cout << "读取到" << temp_count << "条记录" << endl;
     
-    // 创建所有 Person 对象
+    // 创建所有Person对象
     bool root_printed = false;
     for (int i = 0; i < temp_count; i++) {
         if (PersonCount >= 999) {
@@ -265,7 +265,7 @@ void FamilyTree::BuildFromFile(const char* FileName) {
         p->id = ++PersonCount;
         people[p->id] = p;
         
-        // 设置根节点（只输出一次）
+        // 设置根节点 (只输出一次)
         if (StrEqual(temp_list[i].father_name, "无")) {
             root = p;
             if (!root_printed) {
@@ -282,7 +282,7 @@ void FamilyTree::BuildFromFile(const char* FileName) {
     for (int i = 0; i < temp_count; i++) {
         const char* father_name = temp_list[i].father_name;
         
-        // 如果是根节点，跳过
+        // 跳过根节点
         if (strcmp(father_name, "无") == 0) {
             continue;
         }
@@ -441,6 +441,376 @@ void FamilyTree::AddChild(const char* FatherName, const char* name,
 
     father->InsertChildSorted(child);
 
-    cout << "成功添加: " << name << "(id=" << child->id << ")作为" 
+    cout << "成功添加: " << name << ")作为" 
          << FatherName << "的孩子" << endl;
+}
+
+// (6) 将某人移出家谱 (遵循后代过继的规则)
+void FamilyTree::DeletePerson(const char* name) {
+    Person* target = SelectPersonByName(name);
+    if (!target) return;
+    if (target == root) {
+        cout << "不能删除始祖" << endl;
+        return;
+    }
+
+    Person* father = target->father;
+
+    if (target->HasDescendants()) {
+        // 找后代人数最少的兄弟
+        Person* best_bro = nullptr;
+        int min_desc = 999999;
+
+        ChildNode* bro_cur = father->ChildHead->next;
+        while (bro_cur != nullptr) {
+            Person* bro = bro_cur->child;
+            if (bro != target) {
+                int desc_count = 0;
+                bro->GetAllDescendants(nullptr, desc_count, 0); // 只计数
+                if (desc_count < min_desc) {
+                    min_desc = desc_count;
+                    best_bro = bro;
+                }
+            }
+            bro_cur = bro_cur->next;
+        }
+
+        if (best_bro != nullptr) {
+            // 过继给兄弟
+            ChildNode* child_cur = target->ChildHead->next;
+            while (child_cur != nullptr) {
+                Person* c = child_cur->child;
+                c->father = best_bro;
+                best_bro->InsertChildSorted(c);
+                child_cur = child_cur->next;
+            }
+            cout << target->name << "(id=" << target->id << ")的后代已过继给" 
+                 << best_bro->name << endl;
+        } else {
+            // 无兄弟, 归给父亲
+            ChildNode* child_cur = target->ChildHead->next;
+            while (child_cur != nullptr) {
+                Person* c = child_cur->child;
+                c->father = father;
+                father->InsertChildSorted(c);
+                child_cur = child_cur->next;
+            }
+            cout << target->name << "(id=" << target->id << ")的后代已归给上一代 " 
+                 << father->name << endl;
+        }
+    }
+
+    // 从父亲的孩子链表中移除target
+    father->RemoveChild(target);
+
+    // 释放target的孩子链表节点
+    ChildNode* cur = target->ChildHead->next;
+    while (cur != nullptr) {
+        ChildNode* tmp = cur;
+        cur = cur->next;
+        delete tmp;
+    }
+    delete target->ChildHead;
+
+    people[target->id] = nullptr; 
+    delete target;
+
+    cout << "已从家谱中删除" << name << endl;
+}
+
+// (7) 修改信息
+void FamilyTree::ModifyPerson(const char* name, const char* NewBirthDate,
+                              const char* NewMarriage, const char* NewAddress,
+                              const char* NewStatus, const char* NewDeathDate) {
+    Person* p = SelectPersonByName(name);
+    if (!p) return;
+
+    if (NewBirthDate[0] != '\0') StrCopy(p->BirthDate, NewBirthDate, 20);
+    if (NewMarriage[0] != '\0') StrCopy(p->marriage, NewMarriage, 20);
+    if (NewAddress[0] != '\0') StrCopy(p->address, NewAddress, 50);
+    if (NewStatus[0] != '\0') StrCopy(p->status, NewStatus, 20);
+    if (NewDeathDate[0] != '\0') StrCopy(p->DeathDate, NewDeathDate, 20);
+
+    // 若修改出生日期则需要重新在其父亲结点的孩子链表中排序
+    if (NewBirthDate[0] != '\0' && p->father != nullptr) {
+        p->father->RemoveChild(p);
+        p->father->InsertChildSorted(p);
+    }
+    cout << "已修改: " << name << "(id=" << p->id << ")" << endl;
+}
+
+// (8) 直系/旁系判断
+bool FamilyTree::IsAncestor(Person* ancestor, Person* descendant) const {
+    Person* cur = descendant->father;
+    while (cur != nullptr) {
+        if (cur == ancestor) return true;
+        cur = cur->father;
+    }
+    return false;
+}
+
+void FamilyTree::CheckDirectOrCollateral(const char* name1, const char* name2) const {
+    Person* a = SelectPersonByName(name1);
+    Person* b = SelectPersonByName(name2);
+    if (!a || !b) return;
+
+    if (IsAncestor(a, b) || IsAncestor(b, a)) {
+        cout << name1 << "和" << name2 << "是直系亲属" << endl;
+    } else {
+        cout << name1 << "和" << name2 << "是旁系亲属" << endl;
+    }
+}
+
+// LCA
+Person* FamilyTree::FindLCA(Person* a, Person* b) const {
+    if (a == nullptr || b == nullptr) return nullptr;
+
+    // 获取a的所有祖先 (包含自己)
+    Person* ancestors[50];
+    int anc_count = 0;
+    Person* cur = a;
+    while (cur != nullptr && anc_count < 50) {
+        ancestors[anc_count++] = cur;
+        cur = cur->father;
+    }
+
+    // 从b向上找第一个公共祖先
+    cur = b;
+    while (cur != nullptr) {
+        for (int i = 0; i < anc_count; i++) {
+            if (ancestors[i] == cur) return cur;
+        }
+        cur = cur->father;
+    }
+    return nullptr;
+}
+
+// 挑战性问题
+
+// (1) 输出二人的最近共同祖先
+void FamilyTree::FindCommonAncestor(const char* name1, const char* name2) const {
+    Person* a = SelectPersonByName(name1);
+    Person* b = SelectPersonByName(name2);
+    if (!a || !b) return;
+
+    Person* lca = FindLCA(a, b);
+    if (lca == nullptr) {
+        cout << "无共同祖先" << endl;
+        return;
+    }
+
+    int gen_a = a->GetGeneration() - lca->GetGeneration() + 1;
+    int gen_b = b->GetGeneration() - lca->GetGeneration() + 1;
+
+    if(lca == a){
+        cout << name1 << "和" << name2 << "的最近共同祖先是" << lca->name << ", 其中" << name2 << "是" << lca->name << "的" << gen_b << "代子孙" << endl;
+        return;
+    }
+
+    if(lca == b){
+        cout << name1 << "和" << name2 << "的最近共同祖先是" << lca->name << ", 其中" << name1 << "是" << lca->name << "的" << gen_a << "代子孙" << endl;
+        return;
+    }
+
+    cout << name1 << "和" << name2 << "的最近共同祖先是" << lca->name << ", 其中" << name1 << "是" << lca->name << "的" << gen_a << "代子孙, " << name2 << "是" << lca->name << "的" << gen_b << "代子孙" << endl;
+}
+
+// (2) 确定二人的具体亲缘关系
+void FamilyTree::GetRelationString(Person* a, Person* b, char* buffer, int BufSize) const {
+    if (a == b) {
+        StrCopy(buffer, "同一人", BufSize);
+        return;
+    }
+
+    // 父子
+    if (a->father == b) {
+        StrCopy(buffer, b->name, BufSize);
+        int len = 0; while (buffer[len]) len++;
+        const char* s1 = "是";
+        for (int i = 0; s1[i] && len < BufSize - 1; i++) buffer[len++] = s1[i];
+        for (int i = 0; a->name[i] && len < BufSize - 1; i++) buffer[len++] = a->name[i];
+        const char* s2 = "的父亲";
+        for (int i = 0; s2[i] && len < BufSize - 1; i++) buffer[len++] = s2[i];
+        buffer[len] = '\0';
+        return;
+    }
+    if (b->father == a) {
+        StrCopy(buffer, a->name, BufSize);
+        int len = 0; while (buffer[len]) len++;
+        const char* s1 = "是";
+        for (int i = 0; s1[i] && len < BufSize - 1; i++) buffer[len++] = s1[i];
+        for (int i = 0; b->name[i] && len < BufSize - 1; i++) buffer[len++] = b->name[i];
+        const char* s2 = "的父亲";
+        for (int i = 0; s2[i] && len < BufSize - 1; i++) buffer[len++] = s2[i];
+        buffer[len] = '\0';
+        return;
+    }
+
+    // 祖孙
+    Person* cur = b->father;
+    int gen_b = 2;
+    while (cur != nullptr) {
+        if (cur == a) {
+            StrCopy(buffer, a->name, BufSize);
+            int len = 0; while (buffer[len]) len++;
+            const char* s1 = "是";
+            for (int i = 0; s1[i] && len < BufSize - 1; i++) buffer[len++] = s1[i];
+            for (int i = 0; b->name[i] && len < BufSize - 1; i++) buffer[len++] = b->name[i];
+            const char* s2 = "的直系";
+            for (int i = 0; s2[i] && len < BufSize - 1; i++) buffer[len++] = s2[i];
+            char num[10]; int n = gen_b, np = 0;
+            while (n > 0) { num[np++] = '0' + (n % 10); n /= 10; }
+            for (int i = np - 1; i >= 0 && len < BufSize - 1; i--) buffer[len++] = num[i];
+            const char* s3 = "代祖先";
+            for (int i = 0; s3[i] && len < BufSize - 1; i++) buffer[len++] = s3[i];
+            buffer[len] = '\0';
+            return;
+        }
+        cur = cur->father;
+        gen_b++;
+    }
+
+    cur = a->father;
+    int gen_a = 2;
+    while (cur != nullptr) {
+        if (cur == b) {
+            StrCopy(buffer, b->name, BufSize);
+            int len = 0; while (buffer[len]) len++;
+            const char* s1 = "是";
+            for (int i = 0; s1[i] && len < BufSize - 1; i++) buffer[len++] = s1[i];
+            for (int i = 0; a->name[i] && len < BufSize - 1; i++) buffer[len++] = a->name[i];
+            const char* s2 = "的直系";
+            for (int i = 0; s2[i] && len < BufSize - 1; i++) buffer[len++] = s2[i];
+            char num[10]; int n = gen_a, np = 0;
+            while (n > 0) { num[np++] = '0' + (n % 10); n /= 10; }
+            for (int i = np - 1; i >= 0 && len < BufSize - 1; i--) buffer[len++] = num[i];
+            const char* s3 = "代祖先";
+            for (int i = 0; s3[i] && len < BufSize - 1; i++) buffer[len++] = s3[i];
+            buffer[len] = '\0';
+            return;
+        }
+        cur = cur->father;
+        gen_a++;
+    }
+
+    // 旁系关系
+    Person* lca = FindLCA(a, b);
+    int dist_a = a->GetGeneration() - lca->GetGeneration();
+    int dist_b = b->GetGeneration() - lca->GetGeneration();
+
+    // 兄弟
+    if (a->father == b->father && a->father != nullptr) {
+        StrCopy(buffer, "兄弟关系", BufSize);
+        return;
+    }
+
+    // 叔侄
+    if (a->father && a->father->father == b->father && b->father != nullptr) {
+        StrCopy(buffer, b->name, BufSize);
+        int len = 0; while (buffer[len]) len++;
+        const char* s = "是";
+        for (int i = 0; s[i] && len < BufSize - 1; i++) buffer[len++] = s[i];
+        for (int i = 0; a->name[i] && len < BufSize - 1; i++) buffer[len++] = a->name[i];
+        const char* s2 = "的叔叔/伯父";
+        for (int i = 0; s2[i] && len < BufSize - 1; i++) buffer[len++] = s2[i];
+        buffer[len] = '\0';
+        return;
+    }
+    if (b->father && b->father->father == a->father && a->father != nullptr) {
+        StrCopy(buffer, a->name, BufSize);
+        int len = 0; while (buffer[len]) len++;
+        const char* s = "是";
+        for (int i = 0; s[i] && len < BufSize - 1; i++) buffer[len++] = s[i];
+        for (int i = 0; b->name[i] && len < BufSize - 1; i++) buffer[len++] = b->name[i];
+        const char* s2 = "的叔叔/伯父";
+        for (int i = 0; s2[i] && len < BufSize - 1; i++) buffer[len++] = s2[i];
+        buffer[len] = '\0';
+        return;
+    }
+
+    // 堂兄弟
+    if (a->father && b->father && a->father->father == b->father->father
+        && a->father != b->father && a->father->father != nullptr) {
+        StrCopy(buffer, "堂兄弟关系", BufSize);
+        return;
+    }
+
+    // 其他
+    if (dist_a == dist_b) {
+        StrCopy(buffer, "旁系", BufSize);
+        int len = 0; while (buffer[len]) len++;
+        char num[10]; int n = dist_a + 1, np = 0;
+        while (n > 0) { num[np++] = '0' + (n % 10); n /= 10; }
+        for (int i = np - 1; i >= 0 && len < BufSize - 1; i--) buffer[len++] = num[i];
+        const char* s = "代同辈";
+        for (int i = 0; s[i] && len < BufSize - 1; i++) buffer[len++] = s[i];
+        buffer[len] = '\0';
+    } else {
+        StrCopy(buffer, "旁系亲属(代差", BufSize);
+        int len = 0; while (buffer[len]) len++;
+        int diff = dist_a > dist_b ? dist_a - dist_b : dist_b - dist_a;
+        char num[10]; int n = diff, np = 0;
+        while (n > 0) { num[np++] = '0' + (n % 10); n /= 10; }
+        for (int i = np - 1; i >= 0 && len < BufSize - 1; i--) buffer[len++] = num[i];
+        const char* s = ")";
+        for (int i = 0; s[i] && len < BufSize - 1; i++) buffer[len++] = s[i];
+        buffer[len] = '\0';
+    }
+}
+
+void FamilyTree::ShowDetailedRelation(const char* name1, const char* name2) const {
+    Person* a = SelectPersonByName(name1);
+    Person* b = SelectPersonByName(name2);
+    if (!a || !b) return;
+
+    char rel[256];
+    GetRelationString(a, b, rel, 256);
+    cout << name1 << "和" << name2 << "的关系: " << rel << endl;
+
+    Person* lca = FindLCA(a, b);
+    if (lca && lca != a && lca != b) {
+        int gen_a = a->GetGeneration() - lca->GetGeneration() + 1;
+        int gen_b = b->GetGeneration() - lca->GetGeneration() + 1;
+        cout << "(" << name1 << "是" << lca->name << "的 "
+             << gen_a << "代子孙, " << name2 << "是" << lca->name
+             << "的" << gen_b << "代子孙)" << endl;
+    }
+}
+
+// 保存到文件
+void FamilyTree::SaveToFile(const char* FileName) const {
+    ofstream out_file(FileName);
+    if (!out_file) {
+        cout << "无法创建文件: " << FileName << endl;
+        return;
+    }
+
+    out_file << "姓名,出生日期,婚姻状况,地址,目前状况,死亡日期,父亲姓名" << endl;
+
+    // 层序遍历, 用数组模拟队列, 保证父亲先于孩子输出
+    const int MAX = 1000;
+    Person* queue[MAX];
+    int front = 0, rear = 0;
+
+    if (root) queue[rear++] = root;
+
+    while (front < rear) {
+        Person* p = queue[front++];
+
+        out_file << p->name << "," << p->BirthDate << "," << p->marriage << ","
+                 << p->address << "," << p->status << "," << p->DeathDate << ",";
+
+        if (p->father == nullptr) out_file << "无";
+        else out_file << p->father->name;
+        out_file << endl;
+
+        ChildNode* cur = p->ChildHead->next;
+        while (cur != nullptr && rear < MAX) {
+            queue[rear++] = cur->child;
+            cur = cur->next;
+        }
+    }
+
+    out_file.close();
+    cout << "家谱已保存到: " << FileName << endl;
 }

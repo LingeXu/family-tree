@@ -84,7 +84,7 @@ int main() {
             case 6:
                 cout << "请输入要删除的姓名: ";
                 cin.getline(name, 50);
-                //tree.DeletePerson(name);
+                tree.DeletePerson(name);
                 break;
 
             case 7:
@@ -100,7 +100,7 @@ int main() {
                 cin.getline(status, 20);
                 cout << "请输入新的死亡时间(留空则不修改): ";
                 cin.getline(death, 20);
-                //tree.ModifyPerson(name, birth, marriage, address, status, death);
+                tree.ModifyPerson(name, birth, marriage, address, status, death);
                 break;
 
             case 8:
@@ -108,7 +108,7 @@ int main() {
                 cin.getline(name, 50);
                 cout << "请输入第二个人姓名: ";
                 cin.getline(name2, 50);
-                //tree.CheckDirectOrCollateral(name, name2);
+                tree.CheckDirectOrCollateral(name, name2);
                 break;
 
             case 9:
@@ -116,7 +116,7 @@ int main() {
                 cin.getline(name, 50);
                 cout << "请输入第二个人姓名: ";
                 cin.getline(name2, 50);
-                //tree.FindCommonAncestor(name, name2);
+                tree.FindCommonAncestor(name, name2);
                 break;
 
             case 10:
@@ -124,13 +124,13 @@ int main() {
                 cin.getline(name, 50);
                 cout << "请输入第二个人姓名: ";
                 cin.getline(name2, 50);
-                //tree.ShowDetailedRelation(name, name2);
+                tree.ShowDetailedRelation(name, name2);
                 break;
 
             case 11:
                 cout << "请输入保存文件名: ";
                 cin.getline(filename, 100);
-                //tree.SaveToFile(filename);
+                tree.SaveToFile(filename);
                 break;
 
             case 0:
