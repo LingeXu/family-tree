@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家谱管理系统 - 完整版</title>
+    <style>
+        :root {
+            --bg: #f7f8fb;
+            --panel: #ffffff;
+            --line: #d9dee8;
+            --text: #20242c;
+            --muted: #667085;
+            --blue: #2563eb;
+            --green: #168a4a;
+            --amber: #c97a0a;
+            --red: #c2413d;
+            --purple: #7c5ec5;
+            --ink: #3b4454;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: var(--text);
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        }
+
+        .app {
+            min-height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--line);
+            background: var(--panel);
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 720;
+        }
+
+        .source {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: minmax(640px, 1fr) 420px;
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .tree-area, .side {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tree-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        label {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        select, button, input {
+            height: 34px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #fff;
+            color: var(--text);
+            font: inherit;
+            font-size: 14px;
+        }
+
+        select, input {
+            padding: 0 10px;
+        }
+
+        button {
+            padding: 0 12px;
+            cursor: pointer;
+        }
+
+        button.primary {
+            border-color: var(--blue);
+            background: var(--blue);
+            color: #fff;
+        }
+
+        button.danger {
+            border-color: var(--red);
+            background: var(--red);
+            color: #fff;
+        }
+
+        button.success {
+            border-color: var(--green);
+            background: var(--green);
+            color: #fff;
+        }
+
+        .svg-wrap {
+            min-height: 600px;
+            padding: 14px;
+            overflow: auto;
+        }
+
+        svg {
+            display: block;
+            width: 100%;
+            min-width: 880px;
+            height: auto;
+        }
+
+        .edge {
+            stroke: #b8c0cd;
+            stroke-width: 2;
+            fill: none;
+            transition: stroke 180ms ease;
+        }
+
+        .edge.path {
+            stroke: var(--amber);
+            stroke-width: 4;
+        }
+
+        .node circle {
+            r: 23;
+            fill: #fff;
+            stroke: #9aa4b2;
+            stroke-width: 2;
+            transition: all 180ms ease;
+            cursor: pointer;
+        }
+
+        .node text {
+            pointer-events: none;
+            font-size: 13px;
+            fill: #18202c;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+
+        .node:hover circle {
+            stroke: var(--blue);
+            stroke-width: 3;
+            r: 25;
+        }
+
+        .node.selected circle {
+            stroke: var(--blue);
+            stroke-width: 4;
+            fill: #eaf1ff;
+        }
+
+        .node.current circle {
+            stroke: var(--amber);
+            stroke-width: 4;
+            fill: #fff6dc;
+        }
+
+        .node.candidate circle {
+            stroke: var(--purple);
+            stroke-width: 4;
+            fill: #f0ecff;
+        }
+
+        .node.lca circle {
+            stroke: var(--green);
+            stroke-width: 5;
+            fill: #e6f7ee;
+            animation: pulse 900ms ease-in-out infinite;
+        }
+
+        .node.highlight circle {
+            fill: #ff6b6b;
+            stroke: #ff3333;
+            stroke-width: 4;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        .side {
+            display: flex;
+            flex-direction: column;
+            min-height: 600px;
+        }
+
+        .side-section {
+            padding: 14px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .side-section:last-child {
+            border-bottom: 0;
+        }
+
+        h2, h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .info-row {
+            display: flex;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            width: 70px;
+            color: var(--muted);
+        }
+
+        .info-value {
+            flex: 1;
+            color: var(--text);
+        }
+
+        .status {
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fbfcff;
+            margin-bottom: 12px;
+        }
+
+        .status-title {
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .status-detail {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .swatch {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 6px;
+            border-radius: 50%;
+            vertical-align: middle;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th, td {
+            padding: 6px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+        }
+
+        th {
+            color: var(--muted);
+            background: #f8fafc;
+        }
+
+        .member-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid var(--line);
+            cursor: pointer;
+        }
+
+        .member-item:hover {
+            background: #f0f2f5;
+        }
+
+        .member-name {
+            font-weight: 500;
+        }
+
+        .dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            padding: 24px;
+            z-index: 2000;
+            display: none;
+            min-width: 360px;
+            max-width: 450px;
+        }
+
+        .dialog input, .dialog select {
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        .dialog-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .dialog-buttons button {
+            margin: 0 8px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+            display: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            z-index: 3000;
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: var(--muted);
+        }
+
+        .tab.active {
+            color: var(--blue);
+            border-bottom: 2px solid var(--blue);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .form-row input {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header>
+            <div>
+                <h1>家谱管理系统: LCA倍增算法可视化</h1>
+                <div class="source">完整功能: 查看/添加/删除/修改成员 + 寻找最近公共祖先</div>
+            </div>
+            <div class="header-actions">
+                <button id="saveBtn" class="success">保存家谱</button>
+                <button id="loadBtn">加载家谱</button>
+                <button id="resetViewBtn">重置视图</button>
+                <button id="prevStepBtn">◀ 上一步</button>
+                <button id="nextStepBtn" class="primary">下一步 ▶</button>
+                <button id="autoPlayBtn">▶ 自动播放</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="tree-area">
+                <div class="tree-toolbar">
+                    <div class="controls">
+                        <label>成员A:</label>
+                        <select id="personA"></select>
+                        <label>成员B:</label>
+                        <select id="personB"></select>
+                        <button id="queryLcaBtn" class="primary">查询最近公共祖先</button>
+                    </div>
+                    <div class="legend">
+                        <span><span class="swatch" style="background: var(--blue);"></span>选中节点</span>
+                        <span><span class="swatch" style="background: var(--amber);"></span>当前节点</span>
+                        <span><span class="swatch" style="background: var(--purple);"></span>候选祖先</span>
+                        <span><span class="swatch" style="background: var(--green);"></span>LCA</span>
+                    </div>
+                </div>
+                <div class="svg-wrap">
+                    <svg id="treeSvg" viewBox="0 0 1080 650"></svg>
+                </div>
+            </section>
+
+            <aside class="side">
+                <div class="tabs">
+                    <button class="tab active" data-tab="info">成员信息</button>
+                    <button class="tab" data-tab="lca">LCA步骤</button>
+                    <button class="tab" data-tab="manage">管理</button>
+                    <button class="tab" data-tab="members">成员列表</button>
+                </div>
+
+                <!-- 成员信息 Tab -->
+                <div class="tab-content active" id="tab-info">
+                    <div class="side-section">
+                        <div id="infoPanel">
+                            <div class="info-card" style="text-align:center;color:#999;">
+                                点击节点查看详细信息
+                            </div>
+                        </div>
+                    </div>
+                    <div class="side-section">
+                        <h3>右键菜单</h3>
+                        <div class="info-card">
+                            <p>右键点击节点可执行:</p>
+                            <ul style="margin-left: 20px; color: var(--muted); font-size: 13px;">
+                                <li>添加孩子</li>
+                                <li>修改信息</li>
+                                <li>删除成员</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LCA 步骤 Tab -->
+                <div class="tab-content" id="tab-lca">
+                    <div class="side-section">
+                        <div class="status">
+                            <div id="statusTitle" class="status-title">准备就绪</div>
+                            <div id="statusDetail" class="status-detail">请选择两个成员并点击"查询LCA"</div>
+                        </div>
+                    </div>
+                    <div class="side-section">
+                        <h3>倍增表</h3>
+                        <table>
+                            <thead>
+                                <tr><th>k</th><th>up[A][k]</th><th>up[B][k]</th></tr>
+                            </thead>
+                            <tbody id="upTable"></tbody>
+                        </table>
+                    </div>
+                    <div class="side-section" style="flex:1; overflow:auto;">
+                        <h3>算法步骤</h3>
+                        <div id="stepsPanel" style="max-height: 250px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- 管理 Tab -->
+                <div class="tab-content" id="tab-manage">
+                    <div class="side-section">
+                        <h3>添加成员</h3>
+                        <input type="text" id="newName" placeholder="姓名"style="width:100%; margin-bottom:8px">
+                        <input type="text" id="newBirth" placeholder="出生年月(如1990-01)" style="width:100%; margin-bottom:8px">
+                        <select id="newFather" style="width:100%; margin-bottom:8px"></select>
+                        <input type="text" id="newMarriage" placeholder="婚姻状况" value="未婚" style="width:100%; margin-bottom:8px">
+                        <input type="text" id="newAddress" placeholder="地址" value="未知" style="width:100%; margin-bottom:8px">
+                        <select id="newStatus" style="width:100%; margin-bottom:12px">
+                            <option value="在世">在世</option>
+                            <option value="已故">已故</option>
+                        </select>
+                        <button id="addMemberBtn" class="primary" style="width:100%">添加成员</button>
+                    </div>
+                    <div class="side-section">
+                        <h3>危险操作</h3>
+                        <select id="deleteSelect" style="width:70%"></select>
+                        <button id="deleteMemberBtn" class="danger" style="width:28%">删除</button>
+                    </div>
+                </div>
+
+                <!-- 成员列表 Tab -->
+                <div class="tab-content" id="tab-members">
+                    <div class="side-section">
+                        <input type="text" id="searchInput" placeholder="搜索姓名" style="width:100%">
+                        <div id="memberList" class="member-list" style="margin-top:12px"></div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div class="context-menu" id="contextMenu" style="position:fixed; background:white; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.2); display:none; min-width:140px; z-index:1000;">
+        <ul style="list-style:none; padding:8px 0; margin:0;">
+            <li id="menuAdd" style="padding:8px 16px; cursor:pointer;">添加孩子</li>
+            <li id="menuEdit" style="padding:8px 16px; cursor:pointer;">修改信息</li>
+            <li id="menuDelete" style="padding:8px 16px; cursor:pointer;">删除成员</li>
+        </ul>
+    </div>
+
+    <!-- 对话框 -->
+    <div class="overlay" id="overlay"></div>
+
+    <div class="dialog" id="addChildDialog">
+        <h3>添加孩子</h3>
+        <p>父亲: <strong id="childFatherName"></strong></p>
+        <input type="text" id="childName" placeholder="孩子姓名">
+        <input type="text" id="childBirth" placeholder="出生日期">
+        <input type="text" id="childMarriage" placeholder="婚姻状况"value="未婚">
+        <input type="text" id="childAddress" placeholder="地址"value="未知">
+        <select id="childStatus">
+            <option value="在世">在世</option>
+            <option value="已故">已故</option>
+        </select>
+        <input type="text" id="childDeath" placeholder="死亡日期">
+        <div class="dialog-buttons">
+            <button class="confirm" id="confirmAddChild">确定</button>
+            <button class="cancel" id="cancelAddChild">取消</button>
+        </div>
+    </div>
+
+    <div class="dialog" id="editMemberDialog">
+        <h3>修改信息</h3>
+        <p>姓名: <strong id="editMemberName"></strong></p>
+        <input type="text" id="editBirth" placeholder="出生日期">
+        <input type="text" id="editMarriage" placeholder="婚姻状况">
+        <input type="text" id="editAddress" placeholder="地址">
+        <select id="editStatus">
+            <option value="在世">在世</option>
+            <option value="已故">已故</option>
+        </select>
+        <input type="text" id="editDeath" placeholder="死亡日期">
+        <div class="dialog-buttons">
+            <button class="confirm" id="confirmEdit">确定</button>
+            <button class="cancel" id="cancelEdit">取消</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 家谱数据
+        let people = [
+            { id: 1, name: "李甲天", father: null, birth: "1900-01", marriage: "已婚", address: "北京", status: "已故", death: "1970-01", x: 540, y: 55 },
+            { id: 2, name: "李一河", father: 1, birth: "1920-05", marriage: "已婚", address: "北京", status: "已故", death: "2005-03", x: 250, y: 155 },
+            { id: 3, name: "李一福", father: 1, birth: "1922-08", marriage: "未婚", address: "北京", status: "已故", death: "2010-06", x: 540, y: 155 },
+            { id: 4, name: "李一山", father: 1, birth: "1925-11", marriage: "已婚", address: "上海", status: "健在", death: "", x: 830, y: 155 },
+            { id: 5, name: "李二金", father: 2, birth: "1943-04", marriage: "已婚", address: "北京", status: "健在", death: "", x: 160, y: 255 },
+            { id: 6, name: "李二银", father: 2, birth: "1945-07", marriage: "未婚", address: "北京", status: "健在", death: "", x: 340, y: 255 },
+            { id: 7, name: "李二铁", father: 4, birth: "1948-12", marriage: "已婚", address: "北京", status: "健在", death: "", x: 830, y: 255 },
+            { id: 8, name: "李三木", father: 5, birth: "1965-03", marriage: "已婚", address: "北京", status: "健在", death: "", x: 80, y: 355 },
+            { id: 9, name: "李三林", father: 5, birth: "1968-08", marriage: "已婚", address: "北京", status: "健在", death: "", x: 240, y: 355 },
+            { id: 10, name: "李三国", father: 7, birth: "1970-11", marriage: "已婚", address: "北京", status: "健在", death: "", x: 680, y: 355 },
+            { id: 11, name: "李三家", father: 7, birth: "1963-06", marriage: "未婚", address: "上海", status: "健在", death: "", x: 830, y: 355 },
+            { id: 12, name: "李三建", father: 7, birth: "1966-01", marriage: "已婚", address: "上海", status: "健在", death: "", x: 980, y: 355 },
+            { id: 13, name: "李四辉", father: 8, birth: "1990-12", marriage: "未婚", address: "北京", status: "健在", death: "", x: 80, y: 455 },
+            { id: 14, name: "李四明", father: 9, birth: "1985-02", marriage: "已婚", address: "北京", status: "健在", death: "", x: 240, y: 455 },
+            { id: 15, name: "李四峰", father: 10, birth: "1986-09", marriage: "已婚", address: "上海", status: "健在", death: "", x: 620, y: 455 },
+            { id: 16, name: "李四岩", father: 10, birth: "1989-03", marriage: "未婚", address: "上海", status: "健在", death: "", x: 740, y: 455 },
+            { id: 17, name: "李五辰", father: 14, birth: "2010-01", marriage: "未婚", address: "北京", status: "健在", death: "", x: 240, y: 555 },
+            { id: 18, name: "李五星", father: 15, birth: "2009-06", marriage: "未婚", address: "北京", status: "健在", death: "", x: 620, y: 555 }
+        ];
+
+        let nextId = 19;
+        let byId = new Map();
+        let childrenMap = new Map();
+        let depth = {};
+        let up = {};
+        let maxLog = Math.ceil(Math.log2(100)) + 1;
+
+        // LCA步骤
+        let steps = [];
+        let stepIndex = 0;
+        let selectedA = 15;
+        let selectedB = 16;
+        let currentA = 15, currentB = 16;
+        let timer = null;
+        let contextNodeId = null;
+
+        // DOM元素
+        const svg = document.getElementById("treeSvg");
+        const personASelect = document.getElementById("personA");
+        const personBSelect = document.getElementById("personB");
+        const upTableBody = document.getElementById("upTable");
+        const stepsPanel = document.getElementById("stepsPanel");
+        const statusTitle = document.getElementById("statusTitle");
+        const statusDetail = document.getElementById("statusDetail");
+        const infoPanel = document.getElementById("infoPanel");
+        const memberListDiv = document.getElementById("memberList");
+        const deleteSelect = document.getElementById("deleteSelect");
+        const newFatherSelect = document.getElementById("newFather");
+
+        // 函数接口
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById("toast");
+            toast.textContent = msg;
+            toast.style.backgroundColor = isError ? "#e74c3c" : "#27ae60";
+            toast.style.display = "block";
+            setTimeout(() => { toast.style.display = "none"; }, 3000);
+        }
+
+        function nameOf(id) {
+            if (!id) return "无";
+            const p = byId.get(id);
+            return p ? p.name : "无";
+        }
+
+        // 数据重构
+        function rebuildMaps() {
+            byId.clear();
+            childrenMap.clear();
+            for (const p of people) {
+                byId.set(p.id, p);
+                childrenMap.set(p.id, []);
+            }
+            for (const p of people) {
+                if (p.father !== null && childrenMap.has(p.father)) {
+                    childrenMap.get(p.father).push(p.id);
+                }
+            }
+        }
+
+        function dfsBuild(id, d) {
+            depth[id] = d;
+            up[id] = new Array(maxLog + 1).fill(null);
+            up[id][0] = byId.get(id)?.father || null;
+            for (let k = 1; k <= maxLog; k++) {
+                const mid = up[id][k - 1];
+                up[id][k] = mid ? up[mid][k - 1] : null;
+            }
+            for (const childId of childrenMap.get(id) || []) {
+                dfsBuild(childId, d + 1);
+            }
+        }
+
+        function rebuildAll() {
+            rebuildMaps();
+            const roots = people.filter(p => p.father === null);
+            for (const root of roots) {
+                dfsBuild(root.id, 1);
+            }
+            updateSelects();
+            updateDeleteSelect();
+            updateFatherSelect();
+            renderTree();
+        }
+
+        // 渲染
+        function renderTree() {
+            svg.innerHTML = "";
+            for (const p of people) {
+                if (p.father !== null) {
+                    const parent = byId.get(p.father);
+                    if (parent) {
+                        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                        line.setAttribute("x1", parent.x);
+                        line.setAttribute("y1", parent.y + 23);
+                        line.setAttribute("x2", p.x);
+                        line.setAttribute("y2", p.y - 23);
+                        line.setAttribute("class", "edge");
+                        line.dataset.edge = `${parent.id}-${p.id}`;
+                        svg.appendChild(line);
+                    }
+                }
+            }
+
+            for (const p of people) {
+                const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                group.setAttribute("class", "node");
+                group.setAttribute("transform", `translate(${p.x}, ${p.y})`);
+                group.dataset.id = p.id;
+
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.textContent = p.name;
+
+                group.appendChild(circle);
+                group.appendChild(text);
+                group.addEventListener("click", () => showPersonInfo(p.id));
+                group.addEventListener("contextmenu", (e) => {
+                    e.preventDefault();
+                    contextNodeId = p.id;
+                    showContextMenu(e.clientX, e.clientY);
+                });
+                svg.appendChild(group);
+            }
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll(".node").forEach(node => {
+                node.classList.remove("selected", "current", "candidate", "lca", "highlight");
+            });
+            document.querySelectorAll(".edge").forEach(edge => {
+                edge.classList.remove("path");
+            });
+        }
+
+        function applyStep() {
+            if (steps.length === 0 || stepIndex >= steps.length) return;
+            const step = steps[stepIndex];
+            clearHighlights();
+
+            // 高亮选中节点
+            const aEl = document.querySelector(`.node[data-id="${selectedA}"]`);
+            const bEl = document.querySelector(`.node[data-id="${selectedB}"]`);
+            if (aEl) aEl.classList.add("selected");
+            if (bEl) bEl.classList.add("selected");
+
+            // 高亮当前节点
+            for (const id of step.current || []) {
+                const el = document.querySelector(`.node[data-id="${id}"]`);
+                if (el) el.classList.add("current");
+            }
+
+            // 高亮候选
+            for (const id of step.candidates || []) {
+                const el = document.querySelector(`.node[data-id="${id}"]`);
+                if (el) el.classList.add("candidate");
+            }
+
+            // 高亮路径
+            for (const key of step.pathEdges || []) {
+                const edge = document.querySelector(`.edge[data-edge="${key}"]`);
+                if (edge) edge.classList.add("path");
+            }
+
+            // 高亮 LCA
+            if (step.lca) {
+                const lcaEl = document.querySelector(`.node[data-id="${step.lca}"]`);
+                if (lcaEl) lcaEl.classList.add("lca");
+            }
+
+            statusTitle.textContent = `${stepIndex + 1}. ${step.title}`;
+            statusDetail.textContent = step.detail;
+            renderUpTable(step.tableA || currentA, step.tableB || currentB);
+            renderStepsList();
+        }
+
+        function renderUpTable(a, b) {
+            upTableBody.innerHTML = "";
+            for (let k = maxLog; k >= 0; k--) {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td>${k}</td><td>${nameOf(up[a]?.[k])}</td><td>${nameOf(up[b]?.[k])}</td>`;
+                upTableBody.appendChild(tr);
+            }
+        }
+
+        function renderStepsList() {
+            stepsPanel.innerHTML = "";
+            steps.forEach((step, idx) => {
+                const div = document.createElement("div");
+                div.className = "step-item" + (idx === stepIndex ? " active" : "");
+                div.style.cssText = "padding:6px 0; border-bottom:1px solid #edf0f5; cursor:pointer";
+                div.innerHTML = `<span style="color:#667085; width:28px; display:inline-block">${idx+1}</span>${step.title}`;
+                div.onclick = () => { stepIndex = idx; applyStep(); };
+                stepsPanel.appendChild(div);
+            });
+        }
+
+        // LCA算法步骤生成
+        function jumpRecord(id, step, recordCallback) {
+            let cur = id;
+            for (let k = 0; cur && k <= maxLog; k++) {
+                if (step & (1 << k)) {
+                    const next = up[cur][k];
+                    if (recordCallback) recordCallback(k, cur, next);
+                    cur = next;
+                }
+            }
+            return cur;
+        }
+
+        function generateLcaSteps(a, b) {
+            steps = [];
+            currentA = a;
+            currentB = b;
+
+            steps.push({ title: "初始化", detail: `查询 A = ${nameOf(a)}，B = ${nameOf(b)}`, current: [a, b], tableA: a, tableB: b });
+
+            // 检查是否同一棵树
+            // 简化:所有节点都在一棵树
+            if (depth[a] < depth[b]) {
+                [a, b] = [b, a];
+                steps.push({ title: "交换", detail: `确保 A 更深，新 A = ${nameOf(a)}，新 B = ${nameOf(b)}`, current: [a, b], tableA: a, tableB: b });
+            }
+
+            const diff = depth[a] - depth[b];
+            if (diff > 0) {
+                steps.push({ title: "深度对齐", detail: `${nameOf(a)} 向上跳 ${diff} 代`, current: [a, b], tableA: a, tableB: b });
+                a = jumpRecord(a, diff, (k, from, to) => {
+                    steps.push({ title: `跳 2^${k} 级`, detail: `${nameOf(from)} → ${nameOf(to)}`, current: [to, b], pathNodes: [from, to], pathEdges: [`${from}-${to}`], tableA: from, tableB: b });
+                });
+            }
+
+            if (a === b) {
+                steps.push({ title: "找到 LCA", detail: `LCA = ${nameOf(a)}`, lca: a, current: [a, b], tableA: a, tableB: b });
+                return;
+            }
+
+            for (let k = maxLog; k >= 0; k--) {
+                const pa = up[a][k];
+                const pb = up[b][k];
+                if (pa !== pb) {
+                    steps.push({ title: `跳 2^${k} 级`, detail: `${nameOf(a)} → ${nameOf(pa)}，${nameOf(b)} → ${nameOf(pb)}`, current: [pa, pb], pathNodes: [a, pa, b, pb], pathEdges: [`${a}-${pa}`, `${b}-${pb}`], tableA: a, tableB: b });
+                    a = pa;
+                    b = pb;
+                }
+            }
+
+            const lca = up[a][0];
+            steps.push({ title: "结果", detail: `LCA = ${nameOf(lca)}`, lca: lca, current: [a, b], tableA: a, tableB: b });
+        }
+
+        function runLcaQuery() {
+            selectedA = parseInt(personASelect.value);
+            selectedB = parseInt(personBSelect.value);
+            generateLcaSteps(selectedA, selectedB);
+            stepIndex = 0;
+            applyStep();
+        }
+
+        // 成员管理
+        function showPersonInfo(id) {
+            const p = byId.get(id);
+            if (!p) return;
+            infoPanel.innerHTML = `
+                <div class="info-card">
+                    <div class="info-row"><span class="info-label">姓名:</span><span class="info-value">${p.name}</span></div>
+                    <div class="info-row"><span class="info-label">出生日期:</span><span class="info-value">${p.birth || "未知"}</span></div>
+                    <div class="info-row"><span class="info-label">婚姻状况:</span><span class="info-value">${p.marriage || "未知"}</span></div>
+                    <div class="info-row"><span class="info-label">地址:</span><span class="info-value">${p.address || "未知"}</span></div>
+                    <div class="info-row"><span class="info-label">状况:</span><span class="info-value">${p.status || "在世"}</span></div>
+                    <div class="info-row"><span class="info-label">父亲:</span><span class="info-value">${nameOf(p.father)}</span></div>
+                    <div class="info-row"><span class="info-label">子女:</span><span class="info-value">${(childrenMap.get(id) || []).map(c => nameOf(c)).join(", ") || "无"}</span></div>
+                </div>
+            `;
+        }
+
+        function addMember() {
+            const name = document.getElementById("newName").value.trim();
+            const birth = document.getElementById("newBirth").value.trim();
+            const fatherId = parseInt(newFatherSelect.value);
+            const marriage = document.getElementById("newMarriage").value.trim();
+            const address = document.getElementById("newAddress").value.trim();
+            const status = document.getElementById("newStatus").value;
+
+            if (!name || !birth) {
+                showToast("请填写姓名和出生日期", true);
+                return;
+            }
+
+            const newId = nextId++;
+            // 计算新节点位置
+            let x = 540, y = 55;
+            if (fatherId) {
+                const father = byId.get(fatherId);
+                if (father) {
+                    y = father.y + 100;
+                    x = father.x + (childrenMap.get(fatherId)?.length || 0) * 40 - 60;
+                }
+            }
+
+            const newPerson = { id: newId, name, father: fatherId || null, birth, marriage, address, status, death: "", x, y };
+            people.push(newPerson);
+            rebuildAll();
+            showToast(`添加成功: ${name}`);
+            document.getElementById("newName").value = "";
+            document.getElementById("newBirth").value = "";
+        }
+
+        function deleteMember(id) {
+            if (!confirm("确认删除")) return;
+            const p = byId.get(id);
+            if (!p) return;
+            // 删除此人及其后代
+            const toDelete = new Set();
+            function collect(id) {
+                toDelete.add(id);
+                for (const child of childrenMap.get(id) || []) {
+                    collect(child);
+                }
+            }
+            collect(id);
+            people = people.filter(p => !toDelete.has(p.id));
+            rebuildAll();
+            showToast(`已删除: ${p.name}`);
+        }
+
+        function modifyMember(id, data) {
+            const p = byId.get(id);
+            if (!p) return;
+            if (data.birth !== undefined) p.birth = data.birth;
+            if (data.marriage !== undefined) p.marriage = data.marriage;
+            if (data.address !== undefined) p.address = data.address;
+            if (data.status !== undefined) p.status = data.status;
+            if (data.death !== undefined) p.death = data.death;
+            rebuildAll();
+            showToast(`修改成功: ${p.name}`);
+        }
+
+        function saveToLocal() {
+            localStorage.setItem("familyTreeData", JSON.stringify(people));
+            showToast("已保存到本地");
+        }
+
+        function loadFromLocal() {
+            const data = localStorage.getItem("familyTreeData");
+            if (data) {
+                people = JSON.parse(data);
+                nextId = Math.max(...people.map(p => p.id)) + 1;
+                rebuildAll();
+                showToast("加载成功");
+            } else {
+                showToast("无保存数据", true);
+            }
+        }
+
+        // UI
+        function updateSelects() {
+            personASelect.innerHTML = "";
+            personBSelect.innerHTML = "";
+            for (const p of people) {
+                personASelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                personBSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            }
+            personASelect.value = selectedA;
+            personBSelect.value = selectedB;
+        }
+
+        function updateDeleteSelect() {
+            deleteSelect.innerHTML = "";
+            for (const p of people) {
+                deleteSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            }
+        }
+
+        function updateFatherSelect() {
+            newFatherSelect.innerHTML = '<option value="">无</option>';
+            for (const p of people) {
+                newFatherSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            }
+        }
+
+        function updateMemberList() {
+            const keyword = document.getElementById("searchInput").value.toLowerCase();
+            memberListDiv.innerHTML = "";
+            const filtered = people.filter(p => p.name.toLowerCase().includes(keyword));
+            for (const p of filtered) {
+                const div = document.createElement("div");
+                div.className = "member-item";
+                div.innerHTML = `<span class="member-name">${p.name}</span><span style="color:#667085; font-size:12px">${p.birth || ""}</span>`;
+                div.onclick = () => showPersonInfo(p.id);
+                memberListDiv.appendChild(div);
+            }
+        }
+
+        // 右键菜单
+        function showContextMenu(x, y) {
+            const menu = document.getElementById("contextMenu");
+            menu.style.display = "block";
+            menu.style.left = x + "px";
+            menu.style.top = y + "px";
+            document.addEventListener("click", closeContextMenu);
+        }
+
+        function closeContextMenu() {
+            document.getElementById("contextMenu").style.display = "none";
+            document.removeEventListener("click", closeContextMenu);
+        }
+
+        // 操作
+        function bindEvents() {
+            document.getElementById("queryLcaBtn").onclick = () => runLcaQuery();
+            document.getElementById("saveBtn").onclick = () => saveToLocal();
+            document.getElementById("loadBtn").onclick = () => loadFromLocal();
+            document.getElementById("resetViewBtn").onclick = () => {
+                svg.style.transform = "scale(1)";
+                showToast("视图已重置");
+            };
+            document.getElementById("prevStepBtn").onclick = () => {
+                if (stepIndex > 0) { stepIndex--; applyStep(); }
+            };
+            document.getElementById("nextStepBtn").onclick = () => {
+                if (stepIndex < steps.length - 1) { stepIndex++; applyStep(); }
+            };
+            document.getElementById("autoPlayBtn").onclick = () => {
+                if (timer) { clearInterval(timer); timer = null; return; }
+                timer = setInterval(() => {
+                    if (stepIndex < steps.length - 1) { stepIndex++; applyStep(); }
+                    else { clearInterval(timer); timer = null; }
+                }, 1200);
+            };
+            document.getElementById("addMemberBtn").onclick = () => addMember();
+            document.getElementById("deleteMemberBtn").onclick = () => deleteMember(parseInt(deleteSelect.value));
+            document.getElementById("searchInput").oninput = () => updateMemberList();
+
+            // 右键菜单项
+            document.getElementById("menuAdd").onclick = () => {
+                if (contextNodeId) {
+                    document.getElementById("childFatherName").innerText = nameOf(contextNodeId);
+                    document.getElementById("addChildDialog").style.display = "block";
+                    document.getElementById("overlay").style.display = "block";
+                }
+                closeContextMenu();
+            };
+            document.getElementById("menuEdit").onclick = () => {
+                if (contextNodeId) {
+                    const p = byId.get(contextNodeId);
+                    document.getElementById("editMemberName").innerText = p.name;
+                    document.getElementById("editBirth").value = p.birth || "";
+                    document.getElementById("editMarriage").value = p.marriage || "";
+                    document.getElementById("editAddress").value = p.address || "";
+                    document.getElementById("editStatus").value = p.status || "在世";
+                    document.getElementById("editDeath").value = p.death || "";
+                    document.getElementById("editMemberDialog").style.display = "block";
+                    document.getElementById("overlay").style.display = "block";
+                }
+                closeContextMenu();
+            };
+            document.getElementById("menuDelete").onclick = () => {
+                if (contextNodeId) deleteMember(contextNodeId);
+                closeContextMenu();
+            };
+
+            // 对话框
+            document.getElementById("confirmAddChild").onclick = () => {
+                const fatherId = contextNodeId;
+                const name = document.getElementById("childName").value.trim();
+                const birth = document.getElementById("childBirth").value.trim();
+                if (!name || !birth) { showToast("请填写姓名和出生日期", true); return; }
+                const marriage = document.getElementById("childMarriage").value;
+                const address = document.getElementById("childAddress").value;
+                const status = document.getElementById("childStatus").value;
+                const death = document.getElementById("childDeath").value;
+                const newId = nextId++;
+                const father = byId.get(fatherId);
+                let x = father.x + 20, y = father.y + 100;
+                people.push({ id: newId, name, father: fatherId, birth, marriage, address, status, death, x, y });
+                rebuildAll();
+                document.getElementById("addChildDialog").style.display = "none";
+                document.getElementById("overlay").style.display = "none";
+                showToast(`添加成功: ${name}`);
+            };
+            document.getElementById("confirmEdit").onclick = () => {
+                const name = document.getElementById("editMemberName").innerText;
+                const p = people.find(p => p.name === name);
+                if (p) {
+                    p.birth = document.getElementById("editBirth").value;
+                    p.marriage = document.getElementById("editMarriage").value;
+                    p.address = document.getElementById("editAddress").value;
+                    p.status = document.getElementById("editStatus").value;
+                    p.death = document.getElementById("editDeath").value;
+                    rebuildAll();
+                    showToast("修改成功");
+                }
+                document.getElementById("editMemberDialog").style.display = "none";
+                document.getElementById("overlay").style.display = "none";
+            };
+
+            document.querySelectorAll(".cancel").forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll(".dialog").forEach(d => d.style.display = "none");
+                    document.getElementById("overlay").style.display = "none";
+                };
+            });
+
+            // Tab切换
+            document.querySelectorAll(".tab").forEach(tab => {
+                tab.onclick = () => {
+                    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+                    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+                    tab.classList.add("active");
+                    document.getElementById(`tab-${tab.dataset.tab}`).classList.add("active");
+                };
+            });
+        }
+
+        //初始化
+        function init() {
+            rebuildAll();
+            bindEvents();
+            updateMemberList();
+            showToast("家谱管理系统已启动");
+        }
+
+        init();
+    </script>
+</body>
+</html>
